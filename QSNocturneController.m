@@ -396,11 +396,11 @@ void CGSSetDebugOptions(int);
       
       //OSX 10.4 compatible code that puts the overlays on all spaces
       // replacement for the line commented out below
-      if ([overlayWindow respondsToSelector:@selector(setCollectionBehavior:)]) {
-        [overlayWindow setCollectionBehavior:1 | 16];
-      }
+//      if ([overlayWindow respondsToSelector:@selector(setCollectionBehavior:)]) {
+//        [overlayWindow setCollectionBehavior:1 | 16];
+//      }
       //This line is OSX 10.5 specific.
-      //[overlayWindow setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces];
+      [overlayWindow setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces];
 			
 			[overlayWindows addObject:overlayWindow];
 		} else {
@@ -629,8 +629,34 @@ pascal OSStatus AppEventHandler( EventHandlerCallRef inCallRef, EventRef inEvent
   }
 }
 
-- (void)awakeFromNib{
+- (void)windowDidEnterFullScreen:(NSNotification *)notification {
   
+  NSLog(@"blah");
+}
+
+- (NSArray *)customWindowsToEnterFullScreenForWindow:(NSWindow *)window {
+  NSLog(@"blah");
+  
+}
+
+
+- (void)workspaceChanged:(NSNotification *)notif {
+  int currentSpace;
+  // get an array of all the windows in the current Space
+  CFArrayRef windowsInSpace = CGWindowListCopyWindowInfo(kCGWindowListOptionAll | kCGWindowListOptionOnScreenOnly, kCGNullWindowID);      
+  
+  // now loop over the array looking for a window with the kCGWindowWorkspace key
+  for (NSMutableDictionary *thisWindow in (NSArray *)windowsInSpace)
+  {
+    if ([thisWindow objectForKey:(id)kCGWindowWorkspace])
+    {
+      currentSpace = [[thisWindow objectForKey:(id)kCGWindowWorkspace] intValue];
+      break;
+    }
+  }
+}
+- (void)awakeFromNib{
+  [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self selector:@selector(workspaceChanged:) name:NSWorkspaceActiveSpaceDidChangeNotification  object:nil];
   [prefsWindow setBackgroundColor:[NSColor whiteColor]];   
   [prefsWindow setLevel:NSFloatingWindowLevel];   
   [prefsWindow setHidesOnDeactivate:NO];   
@@ -648,16 +674,17 @@ pascal OSStatus AppEventHandler( EventHandlerCallRef inCallRef, EventRef inEvent
   rect = NSMakeRect(0,NSMaxY(rect)-22,NSWidth(rect),22);
   
   menuWindow = [[NSWindow alloc]initWithContentRect:rect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
-  [menuWindow setBackgroundColor: [NSColor blackColor]];
+  [menuWindow setBackgroundColor: [NSColor redColor]];
   [menuWindow setOpaque:NO];
   [menuWindow setAlphaValue:0.9];
   [menuWindow setCanHide:NO];
   [menuWindow setAllowsToolTipsWhenApplicationIsInactive:YES];
   [menuWindow setIgnoresMouseEvents:YES];
   [menuWindow setHasShadow:NO];
+  [menuWindow setDelegate:self];
   [menuWindow setLevel:kCGStatusWindowLevel+2];
-  [menuWindow setCollectionBehavior:1 | 16];
-  [menuWindow setSticky:YES];
+  [menuWindow setCollectionBehavior: NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle];
+//  [menuWindow setSticky:YES];
   //[window setDelegate:[window contentView]]];
   NSTrackingArea *area = [[[NSTrackingArea alloc] initWithRect:NSZeroRect options:NSTrackingMouseEnteredAndExited | NSTrackingInVisibleRect | NSTrackingEnabledDuringMouseDrag |NSTrackingActiveAlways
                                                          owner:self userInfo:nil] autorelease];
@@ -732,13 +759,13 @@ pascal OSStatus AppEventHandler( EventHandlerCallRef inCallRef, EventRef inEvent
   [menuHueOverlay setLevel:kCGStatusWindowLevel+1];
   [menuHueOverlay setFilter:@"CIHueAdjust"];
   [menuHueOverlay setFilterValues:[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithFloat:M_PI], @"inputAngle",nil]];  
-  [menuHueOverlay setCollectionBehavior:1 | 16];
+  [menuHueOverlay setCollectionBehavior:NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle];
   [menuHueOverlay setSticky:YES];
 
   menuInvertOverlay = [[QSCIFilterWindow alloc] init];
   [menuInvertOverlay setLevel:kCGStatusWindowLevel+1];
   [menuInvertOverlay setFilter:@"CIColorInvert"];
-  [menuInvertOverlay setCollectionBehavior:1 | 16];
+  [menuInvertOverlay setCollectionBehavior:NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle];
   [menuInvertOverlay setSticky:YES];
 
   [[NSDistributedNotificationCenter defaultCenter] addObserver:self selector:@selector(endTracking) name:@"com.apple.HIToolbox.endMenuTrackingNotification" object:nil];
